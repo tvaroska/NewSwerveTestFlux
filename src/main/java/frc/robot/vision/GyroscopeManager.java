@@ -4,8 +4,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix6.hardware.Pigeon2;
-import com.kauailabs.navx.frc.AHRS;
-import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.SPI;
 
 /**
@@ -17,15 +15,12 @@ public class GyroscopeManager {
 
     public enum GyroscopeType {
         PIGEON2_CAN,    // CTRE Pigeon 2 on CAN bus (preferred for CTRE systems)
-        NAVX_SPI,       // Kauai Labs NavX on SPI
-        NAVX_USB,       // Kauai Labs NavX on USB
         ADXRS450_SPI,   // Analog Devices ADXRS450 on SPI
         SIMULATION      // Simulation mode
     }
 
     private final GyroscopeType gyroType;
     private final Pigeon2 pigeon2;
-    private final AHRS navx;
     private final edu.wpi.first.wpilibj.ADXRS450_Gyro adxrs450;
 
     // CTRE-specific configuration
@@ -61,28 +56,12 @@ public class GyroscopeManager {
         switch (type) {
             case PIGEON2_CAN:
                 this.pigeon2 = new Pigeon2(PIGEON2_CAN_ID); // Use standard CTRE swerve ID
-                this.navx = null;
                 this.adxrs450 = null;
                 System.out.printf("GyroscopeManager: Initialized Pigeon2 on CAN ID %d%n", PIGEON2_CAN_ID);
                 break;
 
-            case NAVX_SPI:
-                this.pigeon2 = null;
-                this.navx = new AHRS(SPI.Port.kMXP);
-                this.adxrs450 = null;
-                System.out.println("GyroscopeManager: Initialized NavX on SPI");
-                break;
-
-            case NAVX_USB:
-                this.pigeon2 = null;
-                this.navx = new AHRS(SerialPort.Port.kUSB);
-                this.adxrs450 = null;
-                System.out.println("GyroscopeManager: Initialized NavX on USB");
-                break;
-
             case ADXRS450_SPI:
                 this.pigeon2 = null;
-                this.navx = null;
                 this.adxrs450 = new edu.wpi.first.wpilibj.ADXRS450_Gyro();
                 System.out.println("GyroscopeManager: Initialized ADXRS450 on SPI");
                 break;
@@ -90,7 +69,6 @@ public class GyroscopeManager {
             case SIMULATION:
             default:
                 this.pigeon2 = null;
-                this.navx = null;
                 this.adxrs450 = null;
                 System.out.println("GyroscopeManager: Running in simulation mode");
                 break;
@@ -121,31 +99,6 @@ public class GyroscopeManager {
             System.out.printf("GyroscopeManager: Pigeon2 on CAN ID %d not found: %s%n", PIGEON2_CAN_ID, e.getMessage());
         }
 
-        // Try NavX on SPI (common fallback)
-        try {
-            AHRS testNavX = new AHRS(SPI.Port.kMXP);
-            // Wait briefly for NavX to initialize
-            Thread.sleep(100);
-            if (testNavX.isConnected()) {
-                System.out.println("GyroscopeManager: Detected NavX on SPI");
-                return GyroscopeType.NAVX_SPI;
-            }
-        } catch (Exception e) {
-            System.out.println("GyroscopeManager: NavX on SPI not found: " + e.getMessage());
-        }
-
-        // Try NavX on USB
-        try {
-            AHRS testNavX = new AHRS(SerialPort.Port.kUSB);
-            Thread.sleep(100);
-            if (testNavX.isConnected()) {
-                System.out.println("GyroscopeManager: Detected NavX on USB");
-                return GyroscopeType.NAVX_USB;
-            }
-        } catch (Exception e) {
-            System.out.println("GyroscopeManager: NavX on USB not found: " + e.getMessage());
-        }
-
         // Default to simulation if no hardware detected
         System.out.println("GyroscopeManager: No gyroscope hardware detected, using simulation mode");
         return GyroscopeType.SIMULATION;
@@ -164,16 +117,6 @@ public class GyroscopeManager {
                     if (pigeon2 != null) {
                         // Use getYaw() for continuous heading
                         angle = pigeon2.getYaw().getValueAsDouble();
-                    }
-                    break;
-
-                case NAVX_SPI:
-                case NAVX_USB:
-                    if (navx != null && navx.isConnected()) {
-                        // Use getYaw() for NavX as well
-                        angle = navx.getYaw();
-                    } else {
-                        throw new RuntimeException("NavX not connected");
                     }
                     break;
 
@@ -232,13 +175,6 @@ public class GyroscopeManager {
                     }
                     break;
 
-                case NAVX_SPI:
-                case NAVX_USB:
-                    if (navx != null && navx.isConnected()) {
-                        return navx.getRate();
-                    }
-                    break;
-
                 case ADXRS450_SPI:
                     if (adxrs450 != null) {
                         return adxrs450.getRate();
@@ -265,14 +201,6 @@ public class GyroscopeManager {
                     if (pigeon2 != null) {
                         pigeon2.reset();
                         System.out.println("GyroscopeManager: Pigeon2 reset");
-                    }
-                    break;
-
-                case NAVX_SPI:
-                case NAVX_USB:
-                    if (navx != null) {
-                        navx.reset();
-                        System.out.println("GyroscopeManager: NavX reset");
                     }
                     break;
 
@@ -318,10 +246,6 @@ public class GyroscopeManager {
 
         // Hardware-specific health checks
         switch (gyroType) {
-            case NAVX_SPI:
-            case NAVX_USB:
-                return navx != null && navx.isConnected() && !navx.isCalibrating();
-
             case PIGEON2_CAN:
                 if (pigeon2 != null) {
                     // Check if we can successfully read from Pigeon2
@@ -350,14 +274,6 @@ public class GyroscopeManager {
      */
     private void startCalibration() {
         switch (gyroType) {
-            case NAVX_SPI:
-            case NAVX_USB:
-                if (navx != null) {
-                    System.out.println("GyroscopeManager: NavX calibrating...");
-                    // NavX auto-calibrates on startup
-                }
-                break;
-
             case PIGEON2_CAN:
                 if (pigeon2 != null) {
                     System.out.println("GyroscopeManager: Pigeon2 ready");
@@ -429,14 +345,6 @@ public class GyroscopeManager {
 
         // Hardware-specific status
         switch (gyroType) {
-            case NAVX_SPI:
-            case NAVX_USB:
-                if (navx != null) {
-                    SmartDashboard.putBoolean("NavX_Connected", navx.isConnected());
-                    SmartDashboard.putBoolean("NavX_Calibrating", navx.isCalibrating());
-                }
-                break;
-
             case PIGEON2_CAN:
                 if (pigeon2 != null) {
                     try {
@@ -462,9 +370,6 @@ public class GyroscopeManager {
      */
     public boolean isCalibrated() {
         switch (gyroType) {
-            case NAVX_SPI:
-            case NAVX_USB:
-                return navx != null && !navx.isCalibrating();
             case PIGEON2_CAN:
             case ADXRS450_SPI:
             case SIMULATION:

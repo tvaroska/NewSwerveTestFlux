@@ -154,7 +154,7 @@ public class FieldConfiguration {
         try {
             // Try to load the official 2024 field layout
             // Adjust this for the current FRC season
-            return AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
+            return AprilTagFieldLayout.loadFromResource(AprilTagFields.k2024Crescendo.m_resourceFile);
         } catch (Exception e) {
             System.err.println("Failed to load official AprilTag layout, using custom layout: " + e.getMessage());
             return createCustomAprilTagLayout();
@@ -187,30 +187,14 @@ public class FieldConfiguration {
     private static Map<Integer, Pose3d> createBaseAirTagPositions() {
         Map<Integer, Pose3d> positions = new HashMap<>();
 
-        // Example FRC field - adjust for your specific field layout
+        // Single AprilTag in the middle of the wall
+        // Adjust these coordinates based on your actual setup:
+        // - X: distance from robot starting position to wall
+        // - Y: position along the wall (0 = center of field width)
+        // - Z: height of tag above ground
         positions.put(1, new Pose3d(
-            new Translation3d(0.0, 0.0, 1.5),           // Blue alliance wall
-            new Rotation3d(0, 0, 0)                      // Facing +X (toward center)
-        ));
-
-        positions.put(2, new Pose3d(
-            new Translation3d(16.54, 0.0, 1.5),         // Red alliance wall
-            new Rotation3d(0, 0, Math.PI)               // Facing -X (toward center)
-        ));
-
-        positions.put(3, new Pose3d(
-            new Translation3d(16.54, 8.21, 1.5),        // Red alliance corner
-            new Rotation3d(0, 0, -Math.PI/2)            // Facing -Y (toward center)
-        ));
-
-        positions.put(4, new Pose3d(
-            new Translation3d(0.0, 8.21, 1.5),          // Blue alliance corner
-            new Rotation3d(0, 0, Math.PI/2)             // Facing +Y (toward center)
-        ));
-
-        positions.put(5, new Pose3d(
-            new Translation3d(8.27, 4.1, 2.0),          // Speaker center (higher)
-            new Rotation3d(0, 0, Math.PI)               // Facing toward alliance stations
+            new Translation3d(5.0, 0.0, 1.5),           // 5 meters from origin, center of wall, 1.5m high
+            new Rotation3d(0, 0, 0)                      // Facing toward robot starting area
         ));
 
         return positions;
@@ -219,43 +203,20 @@ public class FieldConfiguration {
     private static Map<Integer, Transform3d> createBaseCameraPositions() {
         Map<Integer, Transform3d> positions = new HashMap<>();
 
-        // Configuration options - uncomment based on your robot setup
-
-        // === SINGLE CAMERA SETUP (Front only) ===
-        positions.put(1, new Transform3d(
-            new Translation3d(0.30, 0.0, 0.50),
-            new Rotation3d(0, 0, 0)
-        ));
-
         // === DUAL CAMERA SETUP (Front + Rear) ===
+        // Adjust these values based on your actual camera mounting positions:
+
+        // Camera 1: Front camera
+        positions.put(1, new Transform3d(
+            new Translation3d(0.30, 0.0, 0.50),     // 30cm forward, centered, 50cm high
+            new Rotation3d(0, 0, 0)                  // Facing forward
+        ));
+
+        // Camera 2: Rear camera
         positions.put(2, new Transform3d(
-            new Translation3d(-0.30, 0.0, 0.50),
-            new Rotation3d(0, 0, Math.PI)
+            new Translation3d(-0.30, 0.0, 0.50),    // 30cm backward, centered, 50cm high
+            new Rotation3d(0, 0, Math.PI)           // Facing backward (180° rotation)
         ));
-
-        // === TRIPLE CAMERA SETUP (Front + Rear + Side) ===
-        positions.put(3, new Transform3d(
-            new Translation3d(0.0, 0.25, 0.50),     // Left side
-            new Rotation3d(0, 0, Math.PI/2)
-        ));
-
-        // Alternative configurations:
-
-        // === DUAL CAMERA SETUP (Front + Side) ===
-        // positions.put(2, new Transform3d(
-        //     new Translation3d(0.0, 0.25, 0.50),     // Left side
-        //     new Rotation3d(0, 0, Math.PI/2)
-        // ));
-
-        // === ANGLED CAMERAS for better field coverage ===
-        // positions.put(1, new Transform3d(
-        //     new Translation3d(0.25, 0.10, 0.50),    // Front-left
-        //     new Rotation3d(0, 0, Math.PI/8)         // 22.5° left
-        // ));
-        // positions.put(2, new Transform3d(
-        //     new Translation3d(0.25, -0.10, 0.50),   // Front-right
-        //     new Rotation3d(0, 0, -Math.PI/8)        // 22.5° right
-        // ));
 
         return positions;
     }

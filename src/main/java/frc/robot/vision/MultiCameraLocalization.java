@@ -172,7 +172,7 @@ public class MultiCameraLocalization {
                     }
 
                     try (var visionTiming = performanceMonitor.startTiming("vision_camera_" + cameraId)) {
-                        PhotonPipelineResult result = camera.getLatestResult();
+                        PhotonPipelineResult result = camera.getAllUnreadResults().stream().findFirst().orElse(null);
 
                         if (result == null) {
                             cameraFailures++;
@@ -190,10 +190,16 @@ public class MultiCameraLocalization {
                                     try {
                                         // Calculate uncertainty based on PhotonLib metrics
                                         Matrix<N3, N3> visionCovariance = calculatePhotonCovariance(estimatedPose);
+                                        // Convert 3x3 covariance matrix to diagonal vector for addVisionMeasurement
+                                        var stdDevs = edu.wpi.first.math.VecBuilder.fill(
+                                            Math.sqrt(visionCovariance.get(0, 0)),
+                                            Math.sqrt(visionCovariance.get(1, 1)),
+                                            Math.sqrt(visionCovariance.get(2, 2))
+                                        );
                                         poseEstimator.addVisionMeasurement(
                                             estimatedPose.estimatedPose.toPose2d(),
                                             estimatedPose.timestampSeconds,
-                                            visionCovariance.getData()
+                                            stdDevs
                                         );
                                         validVisionUpdates++;
                                     } catch (Exception e) {
@@ -296,9 +302,9 @@ public class MultiCameraLocalization {
                 PhotonPoseEstimator estimator = new PhotonPoseEstimator(
                     fieldConfig.getAprilTagFieldLayout(),
                     getOptimalPoseStrategy(activeCameraIds.size()),
-                    camera,
                     robotToCamera
                 );
+                estimator.setReferencePose(new Pose2d());
 
                 // Configure estimator for multi-tag pose estimation
                 estimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
@@ -621,7 +627,7 @@ public class MultiCameraLocalization {
             int workingCameras = 0;
             for (Map.Entry<Integer, PhotonCamera> entry : cameras.entrySet()) {
                 try {
-                    PhotonPipelineResult result = entry.getValue().getLatestResult();
+                    PhotonPipelineResult result = entry.getValue().getAllUnreadResults().stream().findFirst().orElse(null);
                     if (result != null) {
                         workingCameras++;
                     }
