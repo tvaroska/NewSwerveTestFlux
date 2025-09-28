@@ -99,13 +99,21 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotPeriodic() {
-      CommandScheduler.getInstance().run(); 
+      CommandScheduler.getInstance().run();
 
-      // Live PID tuning
+      // Update navigation and vision dashboard
+      m_robotContainer.getNavigation().updateDashboard();
+
+      // Update vision system status
+      SmartDashboard.putString("Vision_Status", m_robotContainer.getVision().getDetailedStatus());
+      SmartDashboard.putString("System_Health", m_robotContainer.getVision().getSystemHealthStatus());
+
+      // Live PID tuning (commented out elevator code)
       double newP = SmartDashboard.getNumber("kP", kP);
       double newI = SmartDashboard.getNumber("kI", kI);
       double newD = SmartDashboard.getNumber("kD", kD);
 
+      // Original elevator code commented out...
       // if (newP != kP || newI != kI || newD != kD) {
       //     kP = newP;
       //     kI = newI;
@@ -115,18 +123,6 @@ public class Robot extends TimedRobot {
       //     pidConfig.d(kD);
       //     motor.configure(motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
       // }
-
-      // double position = encoder.getPosition();
-      // double output = motor.getAppliedOutput();
-
-
-      // // Send values to SmartDashboard
-      // SmartDashboard.putNumber("Elevator Position", position);
-      // SmartDashboard.putNumber("Target Position", targetPosition);
-      // SmartDashboard.putNumber("Motor Output", output);
-      // SmartDashboard.putNumber("kP", kP);
-      // SmartDashboard.putNumber("kI", kI);
-      // SmartDashboard.putNumber("kD", kD);
   }
 
 
@@ -141,7 +137,14 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    // Check vision system health and choose appropriate autonomous
+    if (m_robotContainer.getVision().isVisionHealthy()) {
+      m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+      System.out.println("Robot: Starting vision-based autonomous");
+    } else {
+      m_autonomousCommand = m_robotContainer.getEmergencyAutonomous();
+      System.out.println("Robot: Vision unhealthy, starting emergency autonomous");
+    }
 
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();

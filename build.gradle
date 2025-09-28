@@ -56,6 +56,10 @@ dependencies {
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
 
+    // Add PhotonVision and AprilTag support
+    implementation wpi.java.deps.apriltag()
+    implementation "org.photonvision:photonlib-java:v2024.3.1"
+
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
 
